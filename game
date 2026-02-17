@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reto: Agente Educativo 8-Bit</title>
+    
+    <!-- PWA Settings for iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Agente 8-Bit">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5726/5726678.png">
+
+    <!-- PWA Settings for Android/Chrome -->
+    <meta name="theme-color" content="#202028">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Tailwind & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <!-- Web App Manifest (Data URI for Single File Compatibility) -->
+    <link rel="manifest" id="my-manifest">
+
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #202028;
+            /* Patrón de cuadrícula tenue */
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            touch-action: manipulation;
+            image-rendering: pixelated;
+            overflow-x: hidden;
+            overflow-y: auto; 
+            /* Prevenir selección de texto para sensación de App */
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* --- Utilidades Retro --- */
+        .pixel-box {
+            background: #fff;
+            border: 4px solid #000;
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.5);
+            position: relative;
+            z-index: 20;
+        }
+        
+        .pixel-btn {
+            border: 4px solid #000;
+            box-shadow: 4px 4px 0px #000;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        
+        .pixel-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px #000;
+        }
+
+        /* Input personalizado */
+        .pixel-input {
+            font-family: 'Press Start 2P', cursive;
+            border: 4px solid #000;
+            outline: none;
+            text-transform: uppercase;
+        }
+        .pixel-input:focus {
+            background-color: #fef08a; /* yellow-200 */
+        }
+
+        /* Efecto TV Antigua */
+        .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+        }
+
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        /* --- Decoraciones --- */
+        .pixel-svg { shape-rendering: crispEdges; }
+        .float-anim { animation: float 6s ease-in-out infinite; }
+        .float-anim-delayed { animation: float 7s ease-in-out infinite; animation-delay: 1s; }
+        .float-anim-slow { animation: float 8s ease-in-out infinite; animation-delay: 2s; }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        /* Suelo Pixelado */
+        .floor-decoration {
+            background-image: 
+                linear-gradient(90deg, #4ade80 25%, #22c55e 25%, #22c55e 50%, #4ade80 50%, #4ade80 75%, #22c55e 75%);
+            background-size: 40px 40px;
+            box-shadow: 0 -4px 0 #000;
+        }
+    </style>
+</head>
+<body class="text-gray-900 flex items-center justify-center min-h-screen relative py-8 px-4">
+    
+    <div class="crt-overlay"></div>
+
+    <!-- --- DECORACIONES DE FONDO --- -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0 hidden md:block">
+        <!-- Balón -->
+        <div class="absolute top-10 left-10 w-16 h-16 lg:w-24 lg:h-24 opacity-20 float-anim">
+            <svg viewBox="0 0 16 16" class="pixel-svg w-full h-full" fill="white">
+                <path d="M6 0h4v1h2v1h1v2h1v4h-1v2h-1v1h-2v1h-4v-1h-2v-1h-1v-2h-1v-4h1v-2h1v-1h2v-1z" fill="#fff"/>
+                <path d="M7 2h2v2h2v2h-2v2h-2v-2h-2v-2h2v-2z" fill="#000"/> 
+                <path d="M2 6h2v4h-2z M12 6h2v4h-2z" fill="#000"/> 
+            </svg>
+        </div>
+        <!-- Libro -->
+        <div class="absolute top-20 right-16 w-14 h-14 lg:w-20 lg:h-20 opacity-20 float-anim-delayed">
+            <svg viewBox="0 0 16 16" class="pixel-svg w-full h-full" fill="#60a5fa">
+                <rect x="2" y="2" width="10" height="12" fill="#3b82f6"/>
+                <rect x="4" y="4" width="6" height="1" fill="white"/>
+                <rect x="4" y="6" width="6" height="1" fill="white"/>
+                <rect x="4" y="8" width="6" height="1" fill="white"/>
+                <rect x="12" y="2" width="2" height="12" fill="#1d4ed8"/>
+            </svg>
+        </div>
+        <!-- Canasta -->
+        <div class="absolute bottom-32 left-16 w-20 h-20 lg:w-28 lg:h-28 opacity-10 float-anim-slow">
+            <svg viewBox="0 0 16 16" class="pixel-svg w-full h-full" fill="#f97316">
+                <path d="M6 0h4v1h2v1h1v2h1v4h-1v2h-1v1h-2v1h-4v-1h-2v-1h-1v-2h-1v-4h1v-2h1v-1h2v-1z" fill="#ea580c"/>
+                <path d="M2 8h12M8 2v12M4 3l8 10M12 3l-8 10" stroke="#7c2d12" stroke-width="1" shape-rendering="crispEdges"/>
+            </svg>
+        </div>
+        <!-- Silbato -->
+        <div class="absolute bottom-24 right-10 w-12 h-12 lg:w-16 lg:h-16 opacity-20 float-anim">
+            <svg viewBox="0 0 16 16" class="pixel-svg w-full h-full" fill="#cbd5e1">
+                <path d="M2 4h8v6h-4v2h-4v-8z M10 6h4v2h-4z" fill="#94a3b8"/>
+                <path d="M4 2h2v2h-2z" fill="#475569"/> 
+            </svg>
+        </div>
+    </div>
+
+    <div class="absolute bottom-0 w-full h-4 md:h-8 floor-decoration z-0"></div>
+
+    <!-- --- APP CONTAINER --- -->
+    <div id="app" class="w-full max-w-md md:max-w-2xl lg:max-w-3xl relative z-10 transition-all duration-300">
+        
+        <!-- PANTALLA DE INICIO -->
+        <div id="start-screen" class="bg-gray-100 p-6 md:p-10 text-center pixel-box relative">
+            
+            <!-- Botón PWA Install (oculto por defecto) -->
+            <button id="pwa-install-btn" class="hidden absolute top-2 right-2 bg-blue-500 text-white text-[8px] px-2 py-1 pixel-btn border-2 border-black hover:bg-blue-400">
+                <i class="fas fa-download mr-1"></i> APP
+            </button>
+
+            <div class="mb-6 mt-2 flex flex-col items-center justify-center">
+                <div class="w-24 h-24 md:w-32 md:h-32 mb-6">
+                    <svg viewBox="0 0 24 24" class="pixel-svg w-full h-full">
+                        <path d="M2 12h20v10h-20z" fill="#fca5a5"/> 
+                        <path d="M2 12h20v-2h-2v-2h-2v-2h-2v-2h-8v2h-2v2h-2v2h-2v2h-2v2z" fill="#ef4444"/> 
+                        <rect x="10" y="4" width="4" height="4" fill="#fbbf24"/> 
+                        <rect x="11" y="5" width="2" height="2" fill="black"/> 
+                        <rect x="9" y="16" width="6" height="6" fill="#78350f"/> 
+                        <rect x="4" y="14" width="3" height="3" fill="#93c5fd"/> 
+                        <rect x="17" y="14" width="3" height="3" fill="#93c5fd"/> 
+                        <rect x="11.5" y="0" width="1" height="4" fill="#6b7280"/>
+                        <rect x="12.5" y="0" width="3" height="2" fill="#22c55e"/>
+                    </svg>
+                </div>
+
+                <h1 class="text-xl md:text-3xl text-indigo-900 leading-snug uppercase mb-2" style="text-shadow: 2px 2px 0px #a5b4fc;">
+                    Misión:<br>Agente Educativo
+                </h1>
+                <p class="text-[10px] md:text-xs text-gray-500 bg-white px-2 border-2 border-gray-200 mt-2">EDICIÓN 8-BITS</p>
+            </div>
+
+            <div class="mb-8 max-w-sm mx-auto">
+                <div class="relative">
+                    <label for="player-name" class="block text-[8px] md:text-[10px] text-gray-500 mb-2 uppercase tracking-widest text-center">Identificación del Agente</label>
+                    <input type="text" id="player-name" maxlength="10" placeholder="NOMBRE" 
+                           class="w-full p-4 text-center pixel-input text-sm md:text-base bg-gray-50 placeholder-gray-300 shadow-inner" 
+                           autocomplete="off">
+                    <div id="error-msg" class="text-red-500 text-[8px] md:text-[10px] mt-2 hidden blink absolute w-full text-center">¡REQUERIDO!</div>
+                </div>
+            </div>
+
+            <div class="bg-white border-4 border-gray-800 p-4 mb-8 text-left space-y-3 relative shadow-sm max-w-sm mx-auto">
+                <div class="absolute -top-3 -right-3 w-8 h-8">
+                     <svg viewBox="0 0 16 16" class="pixel-svg w-full h-full"><path d="M8 0l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z" fill="#eab308" stroke="black" stroke-width="1"/></svg>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-4 h-4 bg-green-500 border-2 border-black flex-shrink-0"></div>
+                    <p class="text-[10px] md:text-xs text-gray-700 leading-4">Identifica las siglas.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-4 h-4 bg-yellow-500 border-2 border-black flex-shrink-0"></div>
+                    <p class="text-[10px] md:text-xs text-gray-700 leading-4">Compite por el récord.</p>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full max-w-sm mx-auto block py-4 bg-yellow-400 hover:bg-yellow-300 text-black text-xs md:text-sm pixel-btn mb-2 font-bold animate-pulse">
+                INSERT COIN (START)
+            </button>
+        </div>
+
+        <!-- PANTALLA DE JUEGO -->
+        <div id="game-screen" class="hidden relative">
+            <div class="flex justify-between items-end mb-4 md:mb-6 px-1">
+                <div class="flex flex-col bg-black text-white p-2 md:p-3 border-2 border-gray-500 shadow-md">
+                    <span class="text-[8px] md:text-[10px] text-green-400 uppercase mb-1">SCORE</span>
+                    <span id="score-display" class="text-sm md:text-xl text-white">00000</span>
+                </div>
+                
+                <div class="flex flex-col items-center">
+                    <div class="mb-1 animate-bounce">
+                        <i class="fas fa-running text-yellow-400 text-xl md:text-3xl" style="text-shadow: 2px 2px 0 #000;"></i>
+                    </div>
+                    <span id="player-display" class="text-[8px] md:text-[10px] bg-white border border-black px-2 py-1 uppercase font-bold tracking-wider shadow-sm">AGENTE</span>
+                </div>
+
+                <div class="bg-black text-white p-2 md:p-3 border-2 border-gray-500 shadow-md">
+                    <span id="progress-display" class="text-[10px] md:text-xs">1/31</span>
+                </div>
+            </div>
+
+            <div class="h-6 md:h-8 w-full bg-black border-4 border-black mb-6 md:mb-8 relative shadow-lg">
+                <div id="timer-bar" class="h-full bg-green-500 w-full transition-all duration-75 ease-linear border-r-4 border-white"></div>
+            </div>
+
+            <div class="bg-blue-600 p-6 md:p-10 text-center mb-6 md:mb-8 relative pixel-box border-4 border-black !text-white !bg-blue-600 shadow-xl">
+                <div class="absolute -top-3 -left-3 w-6 h-6 md:w-8 md:h-8 bg-red-500 border-2 border-black"></div>
+                <div class="absolute -top-3 -right-3 w-6 h-6 md:w-8 md:h-8 bg-red-500 border-2 border-black"></div>
+
+                <div id="phase-badge" class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-black text-yellow-400 px-3 py-1 text-[8px] md:text-[10px] border-2 border-white uppercase whitespace-nowrap shadow-lg z-10">
+                    FASE 1
+                </div>
+                
+                <h2 id="acronym-text" class="text-3xl md:text-6xl text-white mt-4 mb-4 leading-tight font-black tracking-tighter" style="text-shadow: 4px 4px 0px #000;">SEP</h2>
+                
+                <div class="flex justify-center gap-2 mt-2">
+                    <span class="w-2 h-2 bg-white animate-ping"></span>
+                    <p class="text-blue-100 text-[9px] md:text-xs">SELECT OPTION</p>
+                    <span class="w-2 h-2 bg-white animate-ping"></span>
+                </div>
+            </div>
+
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Opciones aquí -->
+            </div>
+        </div>
+
+        <!-- PANTALLA FINAL -->
+        <div id="result-screen" class="hidden bg-gray-100 p-6 md:p-10 text-center pixel-box">
+            <div class="mb-6 mt-2">
+                <div class="w-20 h-20 md:w-24 md:h-24 mx-auto mb-4">
+                    <svg viewBox="0 0 16 16" class="pixel-svg w-full h-full">
+                        <path d="M2 2h4v1h4v-1h4v4h-2v2h-1v2h-1v1h-4v-1h-1v-2h-1v-2h-2z" fill="#fbbf24"/>
+                        <path d="M6 12h4v2h-4z" fill="#b45309"/>
+                        <path d="M4 14h8v2h-8z" fill="#78350f"/>
+                        <path d="M14 3h2v2h-2z M0 3h2v2h-2z" fill="#f59e0b"/> 
+                    </svg>
+                </div>
+                <h2 class="text-xl md:text-3xl text-red-600 mb-2 uppercase" style="text-shadow: 2px 2px 0px #000;">Mission Clear!</h2>
+                <p class="text-[10px] md:text-xs text-gray-800">EXPEDIENTE COMPLETADO</p>
+            </div>
+
+            <div class="my-6 py-6 bg-black border-4 border-gray-700 text-white relative overflow-hidden max-w-md mx-auto">
+                <div class="absolute inset-0 opacity-20 bg-green-900"></div>
+                <span class="text-[8px] md:text-[10px] text-green-400 uppercase tracking-widest relative z-10 block mb-2">PUNTAJE FINAL</span>
+                <div id="final-score" class="text-3xl md:text-5xl text-yellow-400 mt-2 mb-2 relative z-10 font-bold" style="text-shadow: 3px 3px 0 #b45309;">0</div>
+                <div id="player-final-name" class="text-[10px] md:text-xs text-gray-300 relative z-10 mt-2 border-t border-gray-700 pt-2 inline-block px-4">AGENTE X</div>
+            </div>
+
+            <div class="text-left bg-gray-200 border-4 border-gray-400 p-4 mb-6 max-w-md mx-auto">
+                <p class="text-[10px] md:text-xs text-black text-center mb-4 bg-white border border-black inline-block px-4 py-1 mx-auto block w-max uppercase font-bold shadow-sm">TOP 5 AGENTS</p>
+                <div id="leaderboard-list" class="space-y-3 text-[8px] md:text-xs">
+                    <!-- Se llena con JS -->
+                </div>
+            </div>
+
+            <button onclick="location.reload()" class="w-full max-w-md mx-auto block py-4 bg-green-500 hover:bg-green-400 text-white text-xs md:text-sm pixel-btn flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-redo"></i> PLAY AGAIN
+            </button>
+        </div>
+
+    </div>
+    
+    <script>
+        // --- PWA INSTALL LOGIC ---
+        let deferredPrompt;
+        const installBtn = document.getElementById('pwa-install-btn');
+
+        // Dynamic Manifest Injection (Para evitar tener múltiples archivos)
+        const manifest = {
+            "name": "Reto Educativo 8-Bit",
+            "short_name": "Agente 8-Bit",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#202028",
+            "theme_color": "#202028",
+            "orientation": "portrait",
+            "icons": [{
+                "src": "https://cdn-icons-png.flaticon.com/512/5726/5726678.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }]
+        };
+        const stringManifest = JSON.stringify(manifest);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        document.querySelector('#my-manifest').setAttribute('href', manifestURL);
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+
+        installBtn.addEventListener('click', (e) => {
+            installBtn.classList.add('hidden');
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
+
+        // --- BASE DE DATOS DE PREGUNTAS ---
+        const database = [
+            { a: "SEP", c: "Secretaría de Educación Pública", w: ["Sistema de Evaluación Primaria", "Secretaría de Escuelas Profesionales"], t: 15, phase: "Básicos" },
+            { a: "NEM", c: "Nueva Escuela Mexicana", w: ["Núcleo Educativo Moderno", "Norma de Enseñanza de México"], t: 15, phase: "Básicos" },
+            { a: "LGE", c: "Ley General de Educación", w: ["Logros de Gestión Estudiantil", "Lineamientos de Grados Escolares"], t: 15, phase: "Básicos" },
+            { a: "INEGI", c: "Inst. Nacional de Estadística y Geografía", w: ["Inst. Nacional de Educación y Geografía", "Índice Nac. de Escuelas de Grado Inicial"], t: 15, phase: "Básicos" },
+            { a: "SNTE", c: "Sindicato Nacional de Trabajadores de la Edu.", w: ["Sistema Nacional de Técnicos Educativos", "Sociedad Nacional de Trabajo Escolar"], t: 15, phase: "Básicos" },
+            { a: "DOF", c: "Diario Oficial de la Federación", w: ["Documento Oficial de Formación", "Dirección Operativa de Fomento"], t: 15, phase: "Básicos" },
+            { a: "SEN", c: "Sistema Educativo Nacional", w: ["Servicio Escolar Nacional", "Secretaría de Evaluación Nacional"], t: 15, phase: "Básicos" },
+            { a: "CENEVAL", c: "Centro Nacional de Evaluación para la Edu. Sup.", w: ["Comité Nacional de Escuelas de Validez Local", "Central de Evaluación y Validación Académica"], t: 12, phase: "Evaluación" },
+            { a: "ENLACE", c: "Evaluación Nacional del Logro Académico", w: ["Estrategia de Lenguaje y Aprendizaje", "Escuela Nacional de Logros y Actividades"], t: 12, phase: "Evaluación" },
+            { a: "EXCALE", c: "Exámenes de la Calidad y el Logro Educativos", w: ["Examen de Competencias de Alumnos", "Evaluación de Calidad en el Aprendizaje"], t: 12, phase: "Evaluación" },
+            { a: "INEE", c: "Inst. Nacional para la Evaluación de la Edu.", w: ["Instancia Nacional de Estándares de Enseñanza", "Indicador Nacional de Excelencia Educativa"], t: 12, phase: "Evaluación" },
+            { a: "EXANI-I", c: "Examen Nac. de Ingreso a la Edu. Media Sup.", w: ["Evaluación Nacional de Idiomas e Inteligencia", "Examen de Aptitud de Nivel Inicial"], t: 12, phase: "Evaluación" },
+            { a: "NNA", c: "Niñas, Niños y Adolescentes", w: ["Núcleo Nacional de Aprendizaje", "Nivel de Nutrición y Aprendizaje"], t: 12, phase: "Evaluación" },
+            { a: "IES", c: "Instituciones de Educación Superior", w: ["Institutos de Enseñanza Secundaria", "Indicadores de Educación y Salud"], t: 12, phase: "Evaluación" },
+            { a: "LGSPD", c: "Ley General del Servicio Profesional Docente", w: ["Ley de Gestión Superior para Docentes", "Lineamiento General de Sistemas para Profesores"], t: 10, phase: "Marco Legal" },
+            { a: "SPD", c: "Servicio Profesional Docente", w: ["Sistema de Profesores Destacados", "Secretaría Profesional de Docencia"], t: 10, phase: "Marco Legal" },
+            { a: "CPEUM", c: "Constitución Política de los Estados Unidos Mex.", w: ["Consejo Político Educativo Único", "Comisión Para la Evaluación Única"], t: 10, phase: "Marco Legal" },
+            { a: "UNESCO", c: "Org. de las Naciones Unidas para la Edu., Ciencia y Cultura", w: ["Unión Nacional de Escuelas para la Ciencia", "Unidad Especial de Cultura y Organización"], t: 10, phase: "Internacional" },
+            { a: "OCDE", c: "Org. para la Cooperación y el Desarrollo Econ.", w: ["Oficina de Control de Desarrollo Educativo", "Orden de Calidad para el Desarrollo Estudiantil"], t: 10, phase: "Internacional" },
+            { a: "PISA", c: "Programa para la Eval. Internacional de Alumnos", w: ["Plan Internacional de Seguridad Académica", "Proyecto Integral de Saberes y Aprendizajes"], t: 10, phase: "Internacional" },
+            { a: "IEA", c: "Asociación Int. de Evaluación del Rendimiento", w: ["Instituto de Enseñanza Aplicada", "Agencia Internacional de Educación"], t: 10, phase: "Internacional" },
+            { a: "USICAMM", c: "Unidad del Sist. para la Carrera de las Maestras y Maestros", w: ["Unión de Sistemas de Capacitación", "Unidad de Servicios de Inteligencia Educativa"], t: 8, phase: "Gestión" },
+            { a: "PDA", c: "Proceso de Desarrollo del Aprendizaje", w: ["Plan de Desarrollo Académico", "Programa de Docentes en Acción"], t: 8, phase: "Gestión" },
+            { a: "ATP", c: "Asesores Técnicos Pedagógicos", w: ["Asociación de Técnicos y Profesores", "Apoyo Técnico Profesional"], t: 8, phase: "Gestión" },
+            { a: "AEF", c: "Autoridad Educativa Federal", w: ["Alianza de Escuelas Federales", "Academia de Educación y Formación"], t: 8, phase: "Gestión" },
+            { a: "PNEE", c: "Política Nacional de Evaluación Educativa", w: ["Programa Nacional de Escuelas de Excelencia", "Plan Nacional de Educación Especial"], t: 8, phase: "Gestión" },
+            { a: "AEE", c: "Áreas Estatales de Evaluación", w: ["Asociación de Estudiantes de Educación", "Alianza de Evaluación Externa"], t: 7, phase: "Técnico" },
+            { a: "DGE", c: "Dirección General de Evaluación", w: ["Dirección de Gestión Educativa", "Departamento de Grados Escolares"], t: 7, phase: "Técnico" },
+            { a: "DGEP", c: "Dirección Gral. de Evaluación de Políticas", w: ["Dirección de Gestión de Escuelas Públicas", "Departamento General de Educación Particular"], t: 7, phase: "Técnico" },
+            { a: "OAE", c: "Organismos de Apoyo a la Evaluación", w: ["Oficinas de Atención Escolar", "Ordenanza de Aprendizaje y Enseñanza"], t: 7, phase: "Técnico" }
+        ];
+
+        // --- CONFIGURACIÓN LEADERBOARD ---
+        const STORAGE_KEY = 'pixel_agents_scores';
+        const DEFAULT_SCORES = [
+            { name: "DIRECTOR", score: 25000 },
+            { name: "SUPERV.", score: 18000 },
+            { name: "ASESOR", score: 10000 }
+        ];
+
+        // --- ESTADO DEL JUEGO ---
+        let state = {
+            currentIndex: 0,
+            score: 0,
+            playerName: "INVITADO",
+            timer: null,
+            timerInterval: null,
+            maxTime: 0,
+            canClick: false,
+            questions: [] 
+        };
+
+        // --- FUNCIONES CORE ---
+        
+        function startGame() {
+            // Validación de nombre
+            const nameInput = document.getElementById('player-name');
+            const errorMsg = document.getElementById('error-msg');
+            const rawName = nameInput.value.trim();
+
+            if (!rawName) {
+                nameInput.classList.add('border-red-500', 'bg-red-50');
+                errorMsg.classList.remove('hidden');
+                nameInput.focus();
+                return;
+            }
+
+            state.playerName = rawName.toUpperCase();
+            document.getElementById('player-display').innerText = state.playerName;
+
+            // Transición UI
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            // Barajar preguntas
+            state.questions = [...database];
+            for (let i = state.questions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [state.questions[i], state.questions[j]] = [state.questions[j], state.questions[i]];
+            }
+
+            state.currentIndex = 0;
+            state.score = 0;
+            updateScoreUI();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (state.currentIndex >= state.questions.length) {
+                endGame();
+                return;
+            }
+
+            const q = state.questions[state.currentIndex];
+            state.maxTime = q.t;
+            state.canClick = true;
+
+            document.getElementById('progress-display').innerText = `MISION ${state.currentIndex + 1}/${state.questions.length}`;
+            document.getElementById('acronym-text').innerText = q.a;
+            document.getElementById('phase-badge').innerText = q.phase.toUpperCase();
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            let allOptions = [
+                { text: q.c, correct: true },
+                ...q.w.map(txt => ({ text: txt, correct: false }))
+            ];
+            
+            // Barajar opciones
+            for (let i = allOptions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
+            }
+
+            allOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                // Clase ajustada para GRID y Hover
+                btn.className = `w-full p-4 md:p-6 text-left bg-gray-100 hover:bg-white text-black text-[10px] md:text-xs pixel-btn relative group flex flex-col justify-center h-full transition-all`;
+                btn.innerHTML = `
+                    <div class="flex items-start gap-2">
+                        <span class="text-gray-400 group-hover:text-black mt-1">></span> 
+                        <span class="leading-relaxed">${opt.text}</span>
+                    </div>`;
+                btn.onclick = () => handleAnswer(btn, opt.correct);
+                optionsContainer.appendChild(btn);
+            });
+
+            startTimer(q.t);
+        }
+
+        function startTimer(seconds) {
+            clearInterval(state.timerInterval);
+            const bar = document.getElementById('timer-bar');
+            
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            bar.className = "h-full bg-green-500 w-full border-r-4 border-white";
+            
+            void bar.offsetWidth; 
+
+            bar.style.transition = `width ${seconds}s steps(${seconds * 10})`;
+            bar.style.width = '0%';
+
+            const startTime = Date.now();
+            state.timerInterval = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                if (elapsed >= seconds) {
+                    timeUp();
+                }
+            }, 100);
+        }
+
+        function handleAnswer(btnElement, isCorrect) {
+            if (!state.canClick) return;
+            state.canClick = false;
+            clearInterval(state.timerInterval);
+
+            const bar = document.getElementById('timer-bar');
+            const currentWidth = bar.offsetWidth;
+            const parentWidth = bar.parentElement.offsetWidth;
+            const percentageLeft = (currentWidth / parentWidth);
+
+            if (isCorrect) {
+                btnElement.classList.remove('bg-gray-100', 'hover:bg-white', 'text-black');
+                btnElement.classList.add('bg-green-500', 'text-white', 'border-green-800', 'scale-[1.02]', 'z-10');
+                
+                const timeBonus = Math.round(percentageLeft * 500); 
+                const roundScore = 100 + timeBonus;
+                state.score += roundScore;
+                
+            } else {
+                btnElement.classList.remove('bg-gray-100', 'hover:bg-white', 'text-black');
+                btnElement.classList.add('bg-red-500', 'text-white', 'border-red-800');
+                
+                let blinks = 0;
+                const interval = setInterval(() => {
+                    btnElement.style.visibility = (btnElement.style.visibility === 'hidden' ? 'visible' : 'hidden');
+                    blinks++;
+                    if(blinks > 5) {
+                        clearInterval(interval);
+                        btnElement.style.visibility = 'visible';
+                    }
+                }, 100);
+            }
+
+            updateScoreUI();
+
+            setTimeout(() => {
+                state.currentIndex++;
+                loadQuestion();
+            }, 1500);
+        }
+
+        function timeUp() {
+            if (!state.canClick) return;
+            state.canClick = false;
+            clearInterval(state.timerInterval);
+            
+            const bar = document.getElementById('timer-bar');
+            bar.className = "h-full bg-red-600 w-full";
+            
+            const currentQuestion = state.questions[state.currentIndex];
+            const buttons = document.querySelectorAll('#options-container button');
+            buttons.forEach(b => {
+                if (b.innerText.includes(currentQuestion.c)) {
+                     b.classList.remove('bg-gray-100', 'text-black');
+                     b.classList.add('bg-green-500', 'text-white');
+                }
+            });
+
+            setTimeout(() => {
+                state.currentIndex++;
+                loadQuestion();
+            }, 2000);
+        }
+
+        function updateScoreUI() {
+            document.getElementById('score-display').innerText = state.score.toString().padStart(5, '0');
+        }
+
+        function endGame() {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            
+            const finalScore = state.score;
+            document.getElementById('final-score').innerText = finalScore.toString().padStart(5, '0');
+            document.getElementById('player-final-name').innerText = `AGENTE: ${state.playerName}`;
+
+            // Guardar puntaje y mostrar leaderboard
+            saveScore(state.playerName, finalScore);
+            renderLeaderboard();
+        }
+
+        // --- LÓGICA LEADERBOARD ---
+        function getLeaderboardData() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? JSON.parse(stored) : [...DEFAULT_SCORES];
+        }
+
+        function saveScore(name, score) {
+            let scores = getLeaderboardData();
+            scores.push({ name: name, score: score });
+            
+            // Ordenar descendente
+            scores.sort((a, b) => b.score - a.score);
+            
+            // Mantener solo top 5
+            scores = scores.slice(0, 5);
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+        }
+
+        function renderLeaderboard() {
+            const scores = getLeaderboardData();
+            const listContainer = document.getElementById('leaderboard-list');
+            listContainer.innerHTML = '';
+
+            scores.forEach((entry, index) => {
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center border-b border-gray-300 pb-2";
+                
+                // Color según posición
+                let colorClass = "text-gray-600";
+                if(index === 0) colorClass = "text-orange-600 font-bold text-sm md:text-base";
+                if(index === 1) colorClass = "text-blue-600 font-bold text-sm md:text-base";
+                if(index === 2) colorClass = "text-green-600 font-bold text-sm md:text-base";
+
+                // Resaltar si es el jugador actual
+                const isCurrentPlayer = (entry.name === state.playerName && entry.score === state.score);
+                if(isCurrentPlayer) {
+                    row.className += " bg-yellow-100 animate-pulse px-2 -mx-2 rounded";
+                }
+
+                row.innerHTML = `
+                    <span class="${colorClass}">${index + 1}. ${entry.name}</span>
+                    <span class="${colorClass}">${entry.score}</span>
+                `;
+                listContainer.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
